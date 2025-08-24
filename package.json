@@ -1,0 +1,30 @@
+{
+  "name": "stock-market-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for comprehensive stock market data analysis and trading intelligence",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "inspect": "npx @modelcontextprotocol/inspector dist/index.js"
+  },
+  "keywords": ["mcp", "stock-market", "trading", "analysis"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "axios": "^1.7.2",
+    "date-fns": "^3.6.0",
+    "technicalindicators": "^3.1.0",
+    "zod": "^3.23.8",
+    "node-cache": "^5.1.2",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.15.0",
+    "typescript": "^5.4.5"
+  }
+}
