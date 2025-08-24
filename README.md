@@ -2,33 +2,71 @@
 
 A comprehensive Model Context Protocol (MCP) server providing advanced stock market data, analysis, and trading intelligence for AI agents.
 
+> ⚠️ **IMPORTANT: Data Sources Notice**
+> 
+> This MCP server currently uses **real API data for stock quotes and historical prices only**. All other features (technical analysis, options, fundamentals, news) use **simulated/mock data** for demonstration purposes. See the [Data Sources](#data-sources) section below for details.
+
+## Data Sources
+
+| Feature | Data Source | Status |
+|---------|------------|--------|
+| **Stock Quotes** | Alpha Vantage API | ✅ **REAL DATA** |
+| **Historical Prices** | Alpha Vantage API | ✅ **REAL DATA** |
+| **Technical Indicators** | Calculated from mock data | ⚠️ Simulated |
+| **Chart Patterns** | Pattern detection on mock data | ⚠️ Simulated |
+| **Options Data** | Generated mock options chains | ⚠️ Simulated |
+| **Financial Statements** | Static mock financials | ⚠️ Simulated |
+| **Analyst Ratings** | Generated mock ratings | ⚠️ Simulated |
+| **News Sentiment** | Generated mock news | ⚠️ Simulated |
+| **Social Sentiment** | Random sentiment scores | ⚠️ Simulated |
+| **Market Depth** | Generated order book | ⚠️ Simulated |
+| **Insider Trading** | Mock transactions | ⚠️ Simulated |
+
+### Why Mock Data?
+
+- **Cost**: Real-time financial data APIs are expensive ($100-1000+/month)
+- **Accessibility**: Most require business agreements and compliance
+- **Development**: Allows testing all features without API limits
+- **Demonstration**: Shows the full potential of the MCP architecture
+
+### Making It Production-Ready
+
+To use real data, you can integrate these providers:
+- **Yahoo Finance** (via `yahoo-finance2`) - Free, unofficial
+- **Polygon.io** - Good free tier
+- **IEX Cloud** - Affordable, reliable
+- **Financial Modeling Prep** - Fundamental data
+- **NewsAPI** - Real news sentiment
+
+The codebase is structured to easily swap mock functions with real API calls.
+
 ## Features
 
 ### 📊 Real-Time Market Data
-- **Live Quotes**: Current prices, volume, bid/ask spreads
-- **Historical Data**: OHLCV data with customizable timeframes
-- **Market Depth**: Level 2 order book data
-- **Intraday Data**: Minute-level resolution
+- **Live Quotes**: Current prices, volume, bid/ask spreads *(Real API)*
+- **Historical Data**: OHLCV data with customizable timeframes *(Real API)*
+- **Market Depth**: Level 2 order book data *(Simulated)*
+- **Intraday Data**: Minute-level resolution *(Simulated)*
 
-### 📈 Technical Analysis
+### 📈 Technical Analysis *(All Simulated)*
 - **Indicators**: RSI, MACD, Bollinger Bands, Moving Averages, Stochastic, ADX, ATR, OBV, VWAP
 - **Pattern Recognition**: Head & Shoulders, Triangles, Flags, Wedges, Double Tops/Bottoms
 - **Support/Resistance**: Dynamic level detection with strength analysis
 - **Trading Signals**: Buy/Sell/Hold recommendations based on multiple indicators
 
-### 💰 Options Analytics
+### 💰 Options Analytics *(All Simulated)*
 - **Options Chains**: Complete chains with Greeks for all strikes and expirations
 - **Greeks Calculation**: Delta, Gamma, Theta, Vega, Rho with interpretations
 - **Unusual Activity**: Detect abnormal options flow and block trades
 - **Implied Volatility**: IV rank, percentile, and smile analysis
 
-### 📋 Fundamental Analysis
+### 📋 Fundamental Analysis *(All Simulated)*
 - **Financial Statements**: Income, Balance Sheet, Cash Flow
 - **Earnings**: Historical data, estimates, and surprise analysis
 - **Analyst Ratings**: Consensus ratings and price targets
 - **Insider Trading**: Recent transactions and sentiment analysis
 
-### 🧠 Market Intelligence
+### 🧠 Market Intelligence *(All Simulated)*
 - **News Sentiment**: NLP-analyzed news with relevance scoring
 - **Social Sentiment**: Reddit, Twitter, StockTwits analysis
 - **Sector Performance**: Rotation analysis and breadth indicators
@@ -57,21 +95,31 @@ cp .env.example .env
 Create a `.env` file with your API keys:
 
 ```env
-# API Keys (get free keys from providers)
+# REQUIRED for real stock quotes (get free key from Alpha Vantage)
 ALPHA_VANTAGE_API_KEY=your_api_key_here
-POLYGON_API_KEY=your_api_key_here
-IEX_CLOUD_API_KEY=your_api_key_here
+
+# OPTIONAL - Not yet implemented, for future use
+POLYGON_API_KEY=your_api_key_here  # Future implementation
+IEX_CLOUD_API_KEY=your_api_key_here  # Future implementation
 
 # Settings
-DATA_PROVIDER=alpha_vantage  # Options: alpha_vantage, polygon, iex, yahoo
+DATA_PROVIDER=alpha_vantage  # Currently only alpha_vantage works
 CACHE_TTL_SECONDS=300
 MAX_REQUESTS_PER_MINUTE=60
 ```
 
 ### API Key Providers
-- **Alpha Vantage**: https://www.alphavantage.co/support/#api-key (Free tier available)
-- **Polygon.io**: https://polygon.io (Free tier with 5 API calls/min)
-- **IEX Cloud**: https://iexcloud.io (Free tier with 50,000 messages/month)
+
+#### Currently Supported:
+- **Alpha Vantage**: https://www.alphavantage.co/support/#api-key
+  - ✅ Free tier: 5 API calls/minute, 500 calls/day
+  - ✅ Provides: Real-time quotes and historical data
+  - ✅ **This is the only required API key**
+
+#### Planned for Future:
+- **Polygon.io**: Free tier with 5 API calls/min (not yet implemented)
+- **IEX Cloud**: Free tier with 50,000 messages/month (not yet implemented)
+- **Yahoo Finance**: No API key needed (not yet implemented)
 
 ## Usage
 
@@ -213,16 +261,26 @@ Comprehensive analysis combining all data types.
 
 ## Example Prompts for AI Agents
 
+### Working with Real Data:
 ```
-"Analyze AAPL for potential entry points using technical indicators"
-"Find unusual options activity in tech stocks"
-"What's the sentiment around TSLA based on recent news?"
-"Show me support and resistance levels for SPY"
-"Compare fundamentals of MSFT vs GOOGL"
-"Identify stocks with bullish chart patterns"
-"What's the current market breadth telling us?"
-"Find stocks with high insider buying"
+"What's the current price of AAPL?" ✅ Real API data
+"Show me TSLA's price history for the last month" ✅ Real API data
+"Get me a quote for SPY" ✅ Real API data
 ```
+
+### Working with Simulated Data (Demo):
+```
+"Analyze AAPL for potential entry points using technical indicators" ⚠️ Mock data
+"Find unusual options activity in tech stocks" ⚠️ Mock data
+"What's the sentiment around TSLA based on recent news?" ⚠️ Mock data
+"Show me support and resistance levels for SPY" ⚠️ Mock data
+"Compare fundamentals of MSFT vs GOOGL" ⚠️ Mock data
+"Identify stocks with bullish chart patterns" ⚠️ Mock data
+"What's the current market breadth telling us?" ⚠️ Mock data
+"Find stocks with high insider buying" ⚠️ Mock data
+```
+
+> **Note**: While simulated data doesn't reflect real market conditions, it demonstrates the full capabilities of the MCP architecture and how AI agents can interact with financial data.
 
 ## Architecture
 
@@ -248,10 +306,33 @@ stock-market-mcp/
 - **Batch Processing**: Multiple indicators calculated in parallel
 - **Optimized Queries**: Minimal API calls through intelligent data aggregation
 
-## Roadmap
+## Roadmap to Production
 
+### Immediate Priorities - Real Data Integration
+- [ ] **Yahoo Finance Integration** - Free real-time quotes and historical data
+- [ ] **Polygon.io Integration** - Options chains and market data (free tier)
+- [ ] **NewsAPI Integration** - Real news sentiment analysis
+- [ ] **IEX Cloud Integration** - Reliable fundamental data
+
+### How to Add Real Data Providers
+
+1. **Replace Mock Functions**: Each service has mock data generators that can be swapped:
+   ```typescript
+   // Current: generateMockHistoricalData()
+   // Replace with: fetchYahooFinanceData() or fetchPolygonData()
+   ```
+
+2. **Add Provider Configuration**: Extend `.env` with new API keys:
+   ```env
+   POLYGON_API_KEY=your_key
+   IEX_CLOUD_API_KEY=your_key
+   NEWS_API_KEY=your_key
+   ```
+
+3. **Update Service Classes**: Modify services in `src/services/` to call real APIs
+
+### Future Enhancements
 - [ ] WebSocket support for real-time streaming
-- [ ] Additional data providers (Yahoo Finance, Finnhub)
 - [ ] Machine learning-based pattern recognition
 - [ ] Backtesting capabilities
 - [ ] Portfolio optimization tools
