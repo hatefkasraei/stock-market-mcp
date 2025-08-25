@@ -7,6 +7,9 @@ export class MarketDataService {
   private cache: NodeCache;
   private apiKey: string;
   private provider: string;
+  private alpacaKeyId: string;
+  private alpacaSecretKey: string;
+  private alpacaBaseUrl: string;
   
   constructor() {
     this.cache = new NodeCache({ 
@@ -15,11 +18,15 @@ export class MarketDataService {
     });
     this.apiKey = process.env.ALPHA_VANTAGE_API_KEY || '';
     this.provider = process.env.DATA_PROVIDER || 'alpha_vantage';
+    this.alpacaKeyId = process.env.ALPACA_API_KEY_ID || '';
+    this.alpacaSecretKey = process.env.ALPACA_API_SECRET_KEY || '';
+    this.alpacaBaseUrl = process.env.ALPACA_BASE_URL || 'https://paper-api.alpaca.markets';
     
     // Debug log initialization
     console.error('MarketDataService initialized:');
     console.error('- Provider:', this.provider);
     console.error('- API Key present:', !!this.apiKey);
+    console.error('- Alpaca Key present:', !!this.alpacaKeyId);
     console.error('- Cache TTL:', process.env.CACHE_TTL_SECONDS || '300');
   }
   
@@ -41,6 +48,8 @@ export class MarketDataService {
       
       if (this.provider === 'alpha_vantage') {
         quote = await this.getAlphaVantageQuote(symbol);
+      } else if (this.provider === 'alpaca') {
+        quote = await this.getAlpacaQuote(symbol);
       } else {
         // Fallback to mock data for demonstration
         quote = this.getMockQuote(symbol);
@@ -82,6 +91,8 @@ export class MarketDataService {
       
       if (this.provider === 'alpha_vantage' && this.apiKey) {
         data = await this.getAlphaVantageHistorical(symbol, period, interval);
+      } else if (this.provider === 'alpaca') {
+        data = await this.getAlpacaHistorical(symbol, period, interval);
       } else {
         // Generate mock historical data
         data = this.generateMockHistoricalData(period, interval);
@@ -151,6 +162,77 @@ export class MarketDataService {
     };
   }
   
+  private async getAlpacaQuote(symbol: string): Promise<Quote> {
+    if (!this.alpacaKeyId || !this.alpacaSecretKey) {
+      console.error('No Alpaca API credentials found');
+      throw new Error('Alpaca API credentials not configured');
+    }
+    
+    const url = `https://data.alpaca.markets/v2/stocks/${symbol}/quotes/latest`;
+    console.error(`Fetching from Alpaca: ${url}`);
+    
+    try {
+      const response = await axios.get(url, {
+        headers: {
+          'APCA-API-KEY-ID': this.alpacaKeyId,
+          'APCA-API-SECRET-KEY': this.alpacaSecretKey
+        }
+      });
+      
+      console.error('Alpaca response:', JSON.stringify(response.data));
+      
+      const quote = response.data.quote;
+      const latestTrade = response.data.latestTrade;
+      
+      if (!quote) {
+        throw new Error('No quote data available');
+      }
+      
+      // Calculate price from bid/ask midpoint or use latest trade price
+      const price = latestTrade?.p || ((quote.ap + quote.bp) / 2);
+      
+      // Fetch additional data for daily stats
+      const barsUrl = `https://data.alpaca.markets/v2/stocks/${symbol}/bars/latest?feed=sip`;
+      const barsResponse = await axios.get(barsUrl, {
+        headers: {
+          'APCA-API-KEY-ID': this.alpacaKeyId,
+          'APCA-API-SECRET-KEY': this.alpacaSecretKey
+        }
+      });
+      
+      const bar = barsResponse.data.bar;
+      
+      return {
+        symbol,
+        price: price,
+        change: bar ? price - bar.c : 0,
+        changePercent: bar ? ((price - bar.c) / bar.c) * 100 : 0,
+        volume: bar?.v || 0,
+        high: bar?.h || price,
+        low: bar?.l || price,
+        open: bar?.o || price,
+        previousClose: bar?.c || price,
+        bid: quote.bp || price - 0.01,
+        ask: quote.ap || price + 0.01,
+        bidSize: quote.bs || 0,
+        askSize: quote.as || 0,
+        timestamp: new Date(quote.t)
+      };
+    } catch (error: any) {
+      console.error('Alpaca API error:', error.response?.data || error.message);
+      
+      if (error.response?.status === 429) {
+        throw new Error('Alpaca API rate limit reached. Please wait before retrying.');
+      } else if (error.response?.status === 401) {
+        throw new Error('Invalid Alpaca API credentials');
+      } else if (error.response?.status === 404) {
+        throw new Error(`Symbol ${symbol} not found`);
+      }
+      
+      throw new Error(`Failed to fetch Alpaca quote: ${error.message}`);
+    }
+  }
+  
   private async getAlphaVantageQuote(symbol: string): Promise<Quote> {
     if (!this.apiKey) {
       console.error('No Alpha Vantage API key found');
@@ -197,6 +279,78 @@ export class MarketDataService {
       askSize: 100,
       timestamp: new Date()
     };
+  }
+  
+  private async getAlpacaHistorical(symbol: string, period: string, interval: string): Promise<OHLCV[]> {
+    if (!this.alpacaKeyId || !this.alpacaSecretKey) {
+      throw new Error('Alpaca API credentials not configured');
+    }
+    
+    // Convert period to start date
+    const endDate = new Date();
+    let startDate = new Date();
+    
+    const periodMap: Record<string, () => Date> = {
+      '1d': () => subDays(endDate, 1),
+      '5d': () => subDays(endDate, 5),
+      '1mo': () => subMonths(endDate, 1),
+      '3mo': () => subMonths(endDate, 3),
+      '6mo': () => subMonths(endDate, 6),
+      '1y': () => subYears(endDate, 1),
+      '2y': () => subYears(endDate, 2),
+      '5y': () => subYears(endDate, 5),
+      'max': () => subYears(endDate, 10)
+    };
+    
+    if (periodMap[period]) {
+      startDate = periodMap[period]();
+    }
+    
+    // Convert interval to Alpaca timeframe
+    const timeframeMap: Record<string, string> = {
+      '1m': '1Min',
+      '5m': '5Min',
+      '15m': '15Min',
+      '30m': '30Min',
+      '1h': '1Hour',
+      '1d': '1Day',
+      '1w': '1Week'
+    };
+    
+    const timeframe = timeframeMap[interval] || '1Day';
+    
+    const url = `https://data.alpaca.markets/v2/stocks/${symbol}/bars`;
+    const params = {
+      start: startDate.toISOString(),
+      end: endDate.toISOString(),
+      timeframe: timeframe,
+      limit: 10000,
+      feed: 'sip'
+    };
+    
+    try {
+      const response = await axios.get(url, {
+        headers: {
+          'APCA-API-KEY-ID': this.alpacaKeyId,
+          'APCA-API-SECRET-KEY': this.alpacaSecretKey
+        },
+        params
+      });
+      
+      const bars = response.data.bars || [];
+      
+      return bars.map((bar: any) => ({
+        date: new Date(bar.t),
+        open: bar.o,
+        high: bar.h,
+        low: bar.l,
+        close: bar.c,
+        volume: bar.v
+      }));
+    } catch (error: any) {
+      console.error('Alpaca historical data error:', error.response?.data || error.message);
+      throw new Error(`Failed to fetch Alpaca historical data: ${error.message}`);
+    }
   }
   
   private async getAlphaVantageHistorical(symbol: string, period: string, interval: string): Promise<OHLCV[]> {
